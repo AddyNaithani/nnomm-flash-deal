@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: nnomm-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nnomm
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d nnomm"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  app1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nnomm-app1
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/nnomm
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgrespassword
+      JWT_SECRET: super-secret-nnomm-jwt-signing-key-production-32-chars
+      WEBHOOK_SECRET: super-secret-nnomm-webhook-signing-key-production-32-chars
+      CLAIM_TTL_SECONDS: 600
+      PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  app2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nnomm-app2
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/nnomm
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgrespassword
+      JWT_SECRET: super-secret-nnomm-jwt-signing-key-production-32-chars
+      WEBHOOK_SECRET: super-secret-nnomm-webhook-signing-key-production-32-chars
+      CLAIM_TTL_SECONDS: 600
+      PORT: 8081
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:
