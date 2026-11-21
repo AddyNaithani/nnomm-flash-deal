@@ -70,6 +70,7 @@ class ClaimService(
             }
 
             // We acquired the in-progress slot. Execute claim creation.
+            val attemptSavepoint = conn.setSavepoint("claim_attempt")
             try {
                 val claim = claimRepository.createClaim(
                     conn = conn,
@@ -93,9 +94,11 @@ class ClaimService(
                 )
             } catch (e: NotFoundException) {
                 // 404 is NOT stored in idempotency
+                conn.rollback(attemptSavepoint)
                 idempotencyRepository.removeInProgress(conn, caller.id, idempotencyKey)
                 throw e
             } catch (e: ApiException) {
+                conn.rollback(attemptSavepoint)
                 // 409 conflicts (SOLD_OUT, ALREADY_CLAIMED, DEAL_NOT_LIVE) ARE stored!
                 if (e.statusCode.value == 409) {
                     val errorResponseJson = json.encodeToString(ErrorResponse(ErrorDetails(e.errorCode, e.message)))
@@ -111,6 +114,7 @@ class ClaimService(
                 }
                 throw e
             } catch (e: Exception) {
+                conn.rollback(attemptSavepoint)
                 idempotencyRepository.removeInProgress(conn, caller.id, idempotencyKey)
                 throw e
             }

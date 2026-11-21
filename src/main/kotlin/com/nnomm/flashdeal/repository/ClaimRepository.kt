@@ -76,6 +76,7 @@ class ClaimRepository {
             VALUES (?, ?, ?, ?, ?, 'RESERVED', ?, ?, ?)
         """.trimIndent()
 
+        val savepoint = conn.setSavepoint("claim_insert")
         try {
             conn.prepareStatement(insertClaimSql).use { stmt ->
                 stmt.setObject(1, claimId)
@@ -89,6 +90,7 @@ class ClaimRepository {
                 stmt.executeUpdate()
             }
         } catch (e: PSQLException) {
+            conn.rollback(savepoint)
             // Check for unique index violation (idx_claims_active_per_customer_deal)
             if (e.sqlState == "23505") {
                 throw AlreadyClaimedException("Customer already has an active claim on this deal")

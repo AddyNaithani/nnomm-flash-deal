@@ -69,15 +69,30 @@ class IdempotencyRepository {
             val insertSql = """
                 INSERT INTO idempotency_keys (customer_id, idempotency_key, deal_id, quantity, status, created_at, updated_at)
                 VALUES (?, ?, ?, ?, 'IN_PROGRESS', NOW(), NOW())
+                ON CONFLICT (customer_id, idempotency_key) DO NOTHING
             """.trimIndent()
-            conn.prepareStatement(insertSql).use { stmt ->
+            val inserted = conn.prepareStatement(insertSql).use { stmt ->
                 stmt.setObject(1, customerId)
                 stmt.setString(2, key)
                 stmt.setObject(3, dealId)
                 stmt.setInt(4, quantity)
                 stmt.executeUpdate()
             }
-            return AcquireResult.Acquired
+            if (inserted > 0) {
+                return AcquireResult.Acquired
+            }
+            // Another concurrent transaction inserted the key at the same instant
+            val concurrent = getRecord(conn, customerId, key)
+            if (concurrent != null && concurrent.status == "COMPLETED") {
+                if (concurrent.dealId != dealId || concurrent.quantity != quantity) {
+                    throw IdempotencyKeyReusedException("Same key with different request parameters")
+                }
+                return AcquireResult.Replay(
+                    statusCode = concurrent.responseCode ?: 201,
+                    body = concurrent.responseBody ?: ""
+                )
+            }
+            throw RequestInProgressException("A request with the same key is still running")
         }
 
         val now = Instant.now()
