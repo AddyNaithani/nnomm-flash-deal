@@ -57,7 +57,7 @@ class IdempotencyConcurrencyTest : BaseIntegrationTest() {
         val inProgressCount = AtomicInteger(0)
         val replayedSuccessCount = AtomicInteger(0)
 
-        val executor = Executors.newFixedThreadPool(10)
+        val executor = Executors.newCachedThreadPool()
         val readyLatch = CountDownLatch(totalRequests)
         val startLatch = CountDownLatch(1)
         val doneLatch = CountDownLatch(totalRequests)

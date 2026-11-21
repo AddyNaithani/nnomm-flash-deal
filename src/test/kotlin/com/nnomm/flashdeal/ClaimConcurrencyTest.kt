@@ -56,7 +56,7 @@ class ClaimConcurrencyTest : BaseIntegrationTest() {
         val soldOutCount = AtomicInteger(0)
         val otherStatusMap = ConcurrentHashMap<HttpStatusCode, AtomicInteger>()
 
-        val executor = Executors.newFixedThreadPool(32)
+        val executor = Executors.newCachedThreadPool()
         val readyLatch = CountDownLatch(totalRequests)
         val startLatch = CountDownLatch(1)
         val doneLatch = CountDownLatch(totalRequests)
@@ -166,7 +166,7 @@ class ClaimConcurrencyTest : BaseIntegrationTest() {
         val successCount = AtomicInteger(0)
         val alreadyClaimedCount = AtomicInteger(0)
 
-        val executor = Executors.newFixedThreadPool(10)
+        val executor = Executors.newCachedThreadPool()
         val readyLatch = CountDownLatch(totalAttempts)
         val startLatch = CountDownLatch(1)
         val doneLatch = CountDownLatch(totalAttempts)
