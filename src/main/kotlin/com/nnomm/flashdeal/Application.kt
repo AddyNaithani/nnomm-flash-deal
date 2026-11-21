@@ -110,8 +110,8 @@ fun Application.module(config: AppConfig = AppConfig()) {
     // Authentication Interceptor
     intercept(ApplicationCallPipeline.Plugins) {
         val path = call.request.path()
-        // Skip auth for webhook and health endpoints
-        if (path.startsWith("/v1/webhooks") || path == "/health") {
+        // Skip auth for webhook, health, and demo dashboard endpoints
+        if (path.startsWith("/v1/webhooks") || path == "/health" || path == "/" || path.startsWith("/demo")) {
             return@intercept
         }
 
@@ -129,6 +129,7 @@ fun Application.module(config: AppConfig = AppConfig()) {
         dealRoutes(dealService)
         claimRoutes(claimService)
         webhookRoutes(webhookService)
+        dashboardRoutes(jwtService, webhookVerifier)
         healthRoutes()
     }
 }
