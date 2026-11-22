@@ -1,0 +1,236 @@
+{
+  "info": {
+    "name": "Nnomm Flash Deal API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Postman collection for testing the Nnomm Flash-Deal service"
+  },
+  "item": [
+    {
+      "name": "Generate Admin Token",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/demo/token?role=restaurant_admin",
+          "host": ["{{baseUrl}}"],
+          "path": ["demo", "token"],
+          "query": [{"key": "role", "value": "restaurant_admin"}]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var json = pm.response.json();",
+              "pm.environment.set('adminToken', json.token);",
+              "pm.test('Status is 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create Deal",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Authorization", "value": "Bearer {{adminToken}}"},
+          {"key": "Content-Type", "value": "application/json"}
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Chicken Biryani Feast Box\",\n  \"price_paise\": 9900,\n  \"stock_total\": 50,\n  \"starts_at\": \"2026-11-20T00:00:00Z\",\n  \"ends_at\": \"2026-11-30T23:59:59Z\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/v1/deals",
+          "host": ["{{baseUrl}}"],
+          "path": ["v1", "deals"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('dealId', d.id);",
+              "pm.test('Deal created (201)', function () {",
+              "    pm.response.to.have.status(201);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Generate Customer Token",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/demo/token?role=customer",
+          "host": ["{{baseUrl}}"],
+          "path": ["demo", "token"],
+          "query": [{"key": "role", "value": "customer"}]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var json = pm.response.json();",
+              "pm.environment.set('customerToken', json.token);",
+              "pm.test('Status is 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Claim Units",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Authorization", "value": "Bearer {{customerToken}}"},
+          {"key": "Idempotency-Key", "value": "{{$guid}}"},
+          {"key": "Content-Type", "value": "application/json"}
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"quantity\": 2\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/v1/deals/{{dealId}}/claims",
+          "host": ["{{baseUrl}}"],
+          "path": ["v1", "deals", "{{dealId}}", "claims"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var c = pm.response.json();",
+              "pm.environment.set('claimId', c.id);",
+              "pm.test('Claim reserved (201)', function () {",
+              "    pm.response.to.have.status(201);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Generate Webhook Signature",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/demo/sign?payload={{encodedPayload}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["demo", "sign"],
+          "query": [{"key": "payload", "value": "{{encodedPayload}}"}]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var now = new Date().toISOString();",
+              "var payload = {",
+              "  event_id: 'evt_' + pm.variables.replaceIn('{{$guid}}'),",
+              "  type: 'payment.succeeded',",
+              "  claim_id: pm.environment.get('claimId'),",
+              "  amount_paise: 19800,",
+              "  occurred_at: now",
+              "};",
+              "var raw = JSON.stringify(payload);",
+              "pm.environment.set('webhookPayload', raw);",
+              "pm.environment.set('encodedPayload', encodeURIComponent(raw));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var sig = pm.response.json().signature;",
+              "pm.environment.set('webhookSignature', sig);",
+              "pm.test('Status is 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Send Payment Webhook",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "X-Payment-Signature", "value": "{{webhookSignature}}"},
+          {"key": "Content-Type", "value": "application/json"}
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{{webhookPayload}}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/v1/webhooks/payments",
+          "host": ["{{baseUrl}}"],
+          "path": ["v1", "webhooks", "payments"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Payment webhook responded 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Verify Claim Status",
+      "request": {
+        "method": "GET",
+        "header": [
+          {"key": "Authorization", "value": "Bearer {{customerToken}}"}
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/v1/claims/{{claimId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["v1", "claims", "{{claimId}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var c = pm.response.json();",
+              "pm.test('Status is 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Claim is PAID', function () {",
+              "    pm.expect(c.status).to.eql('PAID');",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

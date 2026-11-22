@@ -1,0 +1,55 @@
+{
+  "id": "3a7b9c1d-4e5f-6a7b-8c9d-0e1f2a3b4c5d",
+  "name": "Nnomm Flash Deal",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8080",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "customerToken",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "dealId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "claimId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "webhookPayload",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "encodedPayload",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "webhookSignature",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "environment"
+}

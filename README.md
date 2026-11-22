@@ -92,6 +92,32 @@ Run the full integration test suite against real PostgreSQL (via Testcontainers 
 
 ---
 
+## 🧪 End-to-End API Test Results (Postman)
+
+All core transaction workflows and payment webhooks were verified using an automated Postman test collection with **100% pass rate (8/8 assertions, 0 errors)**:
+
+| Step | Request Name | Method & Endpoint | Assertions | Result |
+| :--- | :--- | :--- | :--- | :--- |
+| **1** | **Generate Admin Token** | `GET /demo/token?role=restaurant_admin` | Status is 200 OK | ✅ PASS |
+| **2** | **Create Deal** | `POST /v1/deals` | Deal created (201) | ✅ PASS |
+| **3** | **Generate Customer Token** | `GET /demo/token?role=customer` | Status is 200 OK | ✅ PASS |
+| **4** | **Claim Units** | `POST /v1/deals/{dealId}/claims` | Claim reserved (201) | ✅ PASS |
+| **5** | **Generate Webhook Signature** | `GET /demo/sign?payload=...` | Status is 200 OK | ✅ PASS |
+| **6** | **Send Payment Webhook** | `POST /v1/webhooks/payments` | Payment webhook responded 200 | ✅ PASS |
+| **7** | **Verify Claim Status** | `GET /v1/claims/{claimId}` | Status is 200 OK & Claim is PAID | ✅ PASS |
+
+### Test Run Execution Evidence
+
+**Part 1: Authentication, Deal Creation & Unit Claiming**  
+![Postman Test Results Part 1](docs/screenshots/postman_results_1.jpg)
+
+**Part 2: Webhook Signing, Payment Execution & Final PAID Verification**  
+![Postman Test Results Part 2](docs/screenshots/postman_results_2.jpg)
+
+> 💡 The ready-to-run Postman collection and environment files are available in the [`/postman`](postman/) directory for instant one-click execution.
+
+---
+
 ## API Reference & Quick Examples
 
 ### Minting a JWT Token (HS256)
